@@ -27,15 +27,27 @@ class DeviceContinuitySensor:
     VIETNAM_LAT_RANGE = (8.0, 24.0)
     VIETNAM_LON_RANGE = (102.0, 110.0)
 
+    AUTHORIZED_CREATOR_EMAILS = [
+        "phong12052003@gmail.com",
+        "daophong1205@gmail.com",
+        "creator@gmail.com",
+    ]
+
     def __init__(
         self,
         state_file: Optional[Path] = None,
         recovery_seed: str = "SOVEREIGN_MASTER_RECOVERY_SEED_001",
-        creator_google_email: str = "creator@gmail.com",
+        creator_google_email: Optional[str] = None,
+        authorized_google_emails: Optional[List[str]] = None,
     ):
         self.state_file = state_file or Path(".pgod_device_vault.json")
         self.recovery_seed_hash = hashlib.sha256(recovery_seed.encode("utf-8")).hexdigest()
-        self.creator_google_email = creator_google_email
+        self.authorized_google_emails = [
+            e.strip().lower() for e in (authorized_google_emails or self.AUTHORIZED_CREATOR_EMAILS)
+        ]
+        if creator_google_email:
+            self.authorized_google_emails.append(creator_google_email.strip().lower())
+        self.creator_google_email = self.authorized_google_emails[0]
         self.devices: Dict[str, TrustedDevice] = {}
         self._load_devices()
 
@@ -178,10 +190,10 @@ class DeviceContinuitySensor:
         completely eliminating manual CLI commands or recovery seeds.
         """
         clean_email = google_account_email.strip().lower()
-        if clean_email != self.creator_google_email.lower():
+        if clean_email not in self.authorized_google_emails:
             return (
                 False,
-                f"UNAUTHORIZED_GOOGLE_ACCOUNT: '{clean_email}' does not match Creator account.",
+                f"UNAUTHORIZED_GOOGLE_ACCOUNT: '{clean_email}' does not match Creator authorized accounts.",
                 None,
             )
 
