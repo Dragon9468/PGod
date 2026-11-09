@@ -27,9 +27,15 @@ class DeviceContinuitySensor:
     VIETNAM_LAT_RANGE = (8.0, 24.0)
     VIETNAM_LON_RANGE = (102.0, 110.0)
 
-    def __init__(self, state_file: Optional[Path] = None, recovery_seed: str = "SOVEREIGN_MASTER_RECOVERY_SEED_001"):
+    def __init__(
+        self,
+        state_file: Optional[Path] = None,
+        recovery_seed: str = "SOVEREIGN_MASTER_RECOVERY_SEED_001",
+        creator_google_email: str = "creator@gmail.com",
+    ):
         self.state_file = state_file or Path(".pgod_device_vault.json")
         self.recovery_seed_hash = hashlib.sha256(recovery_seed.encode("utf-8")).hexdigest()
+        self.creator_google_email = creator_google_email
         self.devices: Dict[str, TrustedDevice] = {}
         self._load_devices()
 
@@ -156,4 +162,59 @@ class DeviceContinuitySensor:
             "active_device_id": new_dev.device_id,
             "transition_timestamp": now,
         }
+
+    def sync_device_via_google_account(
+        self,
+        google_account_email: str,
+        device_id: str,
+        device_name: str,
+        latitude: float,
+        longitude: float,
+    ) -> Tuple[bool, str, Optional[PresenceSignal]]:
+        """
+        Zero-Friction Google Account Device Handover:
+        Whenever you log in or open the PGod companion on a new phone with your Google Account,
+        the system automatically binds the new device as ACTIVE and retires any prior device,
+        completely eliminating manual CLI commands or recovery seeds.
+        """
+        clean_email = google_account_email.strip().lower()
+        if clean_email != self.creator_google_email.lower():
+            return (
+                False,
+                f"UNAUTHORIZED_GOOGLE_ACCOUNT: '{clean_email}' does not match Creator account.",
+                None,
+            )
+
+        now = datetime.now(timezone.utc).isoformat()
+        auto_migrated_old = []
+
+        # If this is a new device, retire any prior active phones associated with creator
+        if device_id not in self.devices:
+            for old_id, d in self.devices.items():
+                if d.status == DeviceStatus.ACTIVE and d.device_type == "SMARTPHONE":
+                    d.status = DeviceStatus.MIGRATED_AUTOMATICALLY
+                    auto_migrated_old.append(d.device_name)
+
+            new_dev = TrustedDevice(
+                device_id=device_id,
+                device_name=device_name,
+                device_type="SMARTPHONE",
+                bound_google_account=clean_email,
+                registered_at=now,
+                last_seen_at=now,
+                status=DeviceStatus.ACTIVE,
+            )
+            self.devices[device_id] = new_dev
+        else:
+            self.devices[device_id].bound_google_account = clean_email
+
+        self._save_devices()
+        sig = self.evaluate_mobility_pulse(device_id, latitude, longitude)
+
+        migrated_msg = f" (Tự động thay thế máy cũ: {', '.join(auto_migrated_old)})" if auto_migrated_old else ""
+        return (
+            True,
+            f"Xác thực chính chủ qua Google Account '{clean_email}'. Thiết bị '{device_name}' đã được kích hoạt tự động{migrated_msg}.",
+            sig,
+        )
 

@@ -86,6 +86,31 @@ def test_device_continuity_mobility_and_replacement(tmp_path):
     res_bad = sensor.execute_device_replacement(req_bad)
     assert res_bad["success"] is False
 
+    # 5. Zero-Command Automatic Device Migration via Google Account
+    ok, msg, sig_new = sensor.sync_device_via_google_account(
+        google_account_email="creator@gmail.com",
+        device_id="dev-phone-google-auto-01",
+        device_name="Google Pixel 9 Pro Fold",
+        latitude=21.0300,
+        longitude=105.8500,
+    )
+    assert ok is True
+    assert "creator@gmail.com" in msg
+    assert sensor.devices["dev-phone-new-gen"].status == DeviceStatus.MIGRATED_AUTOMATICALLY
+    assert sensor.devices["dev-phone-google-auto-01"].status == DeviceStatus.ACTIVE
+    assert sig_new.confidence_score >= 80.0
+
+    # 6. Unauthorized Google Account rejected
+    bad_ok, bad_msg, _ = sensor.sync_device_via_google_account(
+        google_account_email="hacker@gmail.com",
+        device_id="dev-phone-hacker",
+        device_name="Hacker Phone",
+        latitude=21.0,
+        longitude=105.0,
+    )
+    assert bad_ok is False
+    assert "UNAUTHORIZED_GOOGLE_ACCOUNT" in bad_msg
+
 
 def test_pgod_crypto_signer_compatibility():
     """Verifies that PGod produces valid Ed25519 SovereignCheckinProof tokens."""

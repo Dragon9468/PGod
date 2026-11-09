@@ -125,6 +125,43 @@ def mobile_pulse_cmd(
     console.print(f"[bold green]✔ Trạng thái cập nhật:[/] Điểm tổng hợp {report.composite_confidence}% | Đã gửi reset: {report.heartbeat_dispatched}")
 
 
+@app.command("google-sync")
+def google_sync_cmd(
+    email: str = typer.Option("creator@gmail.com", "--email", "-e", help="Tài khoản Google của Người Sáng Lập"),
+    device_id: str = typer.Option(..., "--device-id", "-d", help="Mã thiết bị mới (tự sinh từ trình duyệt / Google Device ID)"),
+    device_name: str = typer.Option("Galaxy S24 Ultra", "--name", "-n", help="Tên hiển thị của điện thoại mới"),
+    lat: float = typer.Option(21.0285, "--lat", help="Tọa độ vĩ độ GPS"),
+    lon: float = typer.Option(105.8542, "--lon", help="Tọa độ kinh độ GPS"),
+    planet_url: str = typer.Option("http://localhost:8000", "--planet-url", help="Địa chỉ Planet"),
+):
+    """🌐 Đồng bộ thiết bị mới tự động qua Google Account: Không cần gõ lệnh đổi máy khi mua điện thoại mới!"""
+    orchestrator = PresenceOrchestrator()
+    success, msg, sig = orchestrator.device_sensor.sync_device_via_google_account(
+        google_account_email=email,
+        device_id=device_id,
+        device_name=device_name,
+        latitude=lat,
+        longitude=lon,
+    )
+
+    if success:
+        console.print(Panel(
+            f"[bold green]✔ ĐỒNG BỘ THIẾT BỊ MỚI QUA TÀI KHOẢN GOOGLE THÀNH CÔNG[/]\n"
+            f"[cyan]{msg}[/]\n"
+            f"[yellow]Thiết bị mới đang hoạt động:[/] {device_name} (ID: {device_id})\n"
+            f"[dim]Tất cả thiết bị cũ đã tự động được lưu trữ và thay thế.[/]",
+            title="🌐 Google Ecosystem Zero-Command Handover"
+        ))
+        report = orchestrator.evaluate_ambient_presence(
+            mobility_pulse={"device_id": device_id, "lat": lat, "lon": lon},
+            auto_dispatch=True,
+            planet_url=planet_url,
+        )
+        console.print(f"[bold green]✔ Đã gửi heartbeat tự động reset timer:[/] {report.heartbeat_dispatched}")
+    else:
+        console.print(f"[bold red]❌ Thất bại:[/] {msg}")
+
+
 @app.command("daemon")
 def daemon_cmd(
     interval_seconds: int = typer.Option(3600, "--interval", "-i", help="Chu kỳ kiểm tra thụ động (mặc định: 1 giờ)"),

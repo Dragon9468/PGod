@@ -15,6 +15,7 @@ class DeviceStatus(str, Enum):
     ACTIVE = "ACTIVE"
     REPLACED = "REPLACED"
     REVOKED = "REVOKED"
+    MIGRATED_AUTOMATICALLY = "MIGRATED_AUTOMATICALLY"
 
 
 class PresenceSignal(BaseModel):
@@ -39,6 +40,7 @@ class TrustedDevice(BaseModel):
     device_id: str
     device_name: str
     device_type: str  # SMARTPHONE, LAPTOP, WORKSTATION
+    bound_google_account: Optional[str] = None
     registered_at: str
     last_seen_at: str
     last_latitude: Optional[float] = None
