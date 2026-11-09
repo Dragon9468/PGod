@@ -106,6 +106,25 @@ def replace_device_cmd(
         console.print(f"[bold red]❌ Lỗi thay đổi thiết bị:[/] {res.get('reason')}")
 
 
+@app.command("mobile-pulse")
+def mobile_pulse_cmd(
+    device_id: str = typer.Option("dev-phone-primary-01", "--device", "-d", help="Mã định danh điện thoại"),
+    lat: float = typer.Option(..., "--lat", help="Vĩ độ GPS hiện tại"),
+    lon: float = typer.Option(..., "--lon", help="Kinh độ GPS hiện tại"),
+    planet_url: str = typer.Option("http://localhost:8000", "--planet-url", help="Địa chỉ Planet"),
+):
+    """📍 Gửi xung GPS từ điện thoại về PGod để cập nhật hành lang di chuyển và kích hoạt gia hạn."""
+    orchestrator = PresenceOrchestrator()
+    sig = orchestrator.device_sensor.evaluate_mobility_pulse(device_id, lat, lon)
+    console.print(f"[cyan]Xung GPS:[/] {sig.summary} (Điểm tin cậy: {sig.confidence_score}%)")
+    report = orchestrator.evaluate_ambient_presence(
+        mobility_pulse={"device_id": device_id, "lat": lat, "lon": lon},
+        auto_dispatch=True,
+        planet_url=planet_url,
+    )
+    console.print(f"[bold green]✔ Trạng thái cập nhật:[/] Điểm tổng hợp {report.composite_confidence}% | Đã gửi reset: {report.heartbeat_dispatched}")
+
+
 @app.command("daemon")
 def daemon_cmd(
     interval_seconds: int = typer.Option(3600, "--interval", "-i", help="Chu kỳ kiểm tra thụ động (mặc định: 1 giờ)"),
