@@ -61,3 +61,4 @@ class StylometrySensor:
                 "is_consistent": is_consistent,
             },
         )
+

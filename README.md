@@ -39,3 +39,4 @@ python -m pgod.cli replace-device dev-phone-primary-01 dev-phone-new-galaxy "Cre
 # Chạy ngầm daemon giám sát định kỳ
 python -m pgod.cli daemon --interval 3600
 ```
+

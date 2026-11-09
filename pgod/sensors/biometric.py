@@ -48,3 +48,4 @@ class BiometricGlanceSensor:
                 "hardware_enclave": True,
             },
         )
+

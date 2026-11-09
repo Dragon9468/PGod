@@ -121,3 +121,4 @@ def test_presence_orchestrator_aggregation_and_auto_dispatch():
         assert report.composite_confidence >= 80.0
         assert report.heartbeat_dispatched is True
         assert "AUTONOMOUS_SUCCESS" in report.dispatch_result
+

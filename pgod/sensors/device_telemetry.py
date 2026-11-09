@@ -156,3 +156,4 @@ class DeviceContinuitySensor:
             "active_device_id": new_dev.device_id,
             "transition_timestamp": now,
         }
+

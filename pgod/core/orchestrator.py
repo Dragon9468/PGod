@@ -104,3 +104,4 @@ class PresenceOrchestrator:
 
         self.reports_history.append(report)
         return report
+
