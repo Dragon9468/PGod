@@ -8,6 +8,7 @@ from rich.table import Table
 
 from pgod.core.orchestrator import PresenceOrchestrator
 from pgod.models import DeviceReplacementRequest
+from pgod.sensors.biometric_vault import CreatorBiometricVault
 
 app = typer.Typer(
     name="pgod",
@@ -178,6 +179,22 @@ def daemon_cmd(
             time.sleep(interval_seconds)
     except KeyboardInterrupt:
         console.print("\n[yellow]Đã dừng PGod Daemon an toàn.[/]")
+
+
+@app.command("vault-status")
+def vault_status_cmd():
+    """🔐 Hiển thị hồ sơ sinh trắc học bất biến của Chủ sở hữu lưu trong PGod."""
+    vault = CreatorBiometricVault()
+    rec = vault.export_vault_record()
+    console.print(Panel(
+        f"[bold cyan]Profile ID:[/] {rec['profile_id']}\n"
+        f"[bold green]Creator Email:[/] {rec['creator_email']}\n"
+        f"[bold yellow]VNeID Hash:[/] {rec['vneid_hash'][:24]}...\n"
+        f"[bold magenta]Ed25519 PubKey:[/] {rec['ed25519_public_key_hex'][:24]}...\n"
+        f"[bold white]Hardware Factors:[/] {', '.join(rec['hardware_factors'])}\n"
+        f"[bold red]Immutable Lock:[/] {rec['is_locked']} (Cấm tự đăng ký mới)",
+        title="🔐 PGod Immutable Creator Biometric Vault"
+    ))
 
 
 def main():

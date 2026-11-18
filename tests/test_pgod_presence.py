@@ -11,6 +11,7 @@ from pgod.models import (
     SensorType,
 )
 from pgod.sensors.biometric import BiometricGlanceSensor
+from pgod.sensors.biometric_vault import CreatorBiometricVault
 from pgod.sensors.device_telemetry import DeviceContinuitySensor
 from pgod.sensors.stylometry import StylometrySensor
 
@@ -146,4 +147,46 @@ def test_presence_orchestrator_aggregation_and_auto_dispatch():
         assert report.composite_confidence >= 80.0
         assert report.heartbeat_dispatched is True
         assert "AUTONOMOUS_SUCCESS" in report.dispatch_result
+
+
+def test_creator_biometric_vault_verifies_authentic_and_blocks_trojan_macro():
+    """Verifies CreatorBiometricVault authenticates natural VN telemetry and rejects trojan zero-variance input."""
+    vault = CreatorBiometricVault()
+    rec = vault.export_vault_record()
+    assert rec["creator_email"] == "daophong1205@gmail.com"
+    assert rec["is_locked"] is True
+
+    # 1. Authentic human cadence in Vietnam UTC+7
+    ok_res = vault.verify_biometric_telemetry({
+        "email": "daophong1205@gmail.com",
+        "sample_count": 8,
+        "std_dwell_ms": 14.6,
+        "mean_dwell_ms": 92.4,
+        "text_sample": "Theo tôi hệ thống cần nâng cấp tự động và bảo vệ hạ tầng",
+        "timezone_offset_min": -420,
+    })
+    assert ok_res["verified"] is True
+    assert ok_res["composite_score"] >= 75.0
+    assert ok_res["anomaly_reason"] is None
+
+    # 2. Trojan synthetic macro (0-variance dwell across >=5 keystrokes) must be blocked
+    trojan_res = vault.verify_biometric_telemetry({
+        "email": "daophong1205@gmail.com",
+        "sample_count": 12,
+        "std_dwell_ms": 0.0,
+        "mean_dwell_ms": 50.0,
+        "timezone_offset_min": -420,
+    })
+    assert trojan_res["verified"] is False
+    assert "TROJAN_MACRO_ZERO_VARIANCE_KEYSTROKES" in trojan_res["anomaly_reason"]
+
+    # 3. Unauthorized email must be rejected
+    bad_email_res = vault.verify_biometric_telemetry({
+        "email": "attacker@evil.com",
+        "sample_count": 6,
+        "std_dwell_ms": 10.0,
+        "timezone_offset_min": -420,
+    })
+    assert bad_email_res["verified"] is False
+    assert "UNAUTHORIZED_CREATOR_EMAIL" in bad_email_res["anomaly_reason"]
 

@@ -55,3 +55,21 @@ class DeviceReplacementRequest(BaseModel):
     recovery_seed_hash: str
     reason: str = "Device Damaged / Replaced"
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class KeystrokeDynamicsBaseline(BaseModel):
+    min_human_dwell_std_ms: float = 1.5
+    typical_dwell_ms_range: List[float] = Field(default_factory=lambda: [35.0, 260.0])
+    typical_flight_ms_range: List[float] = Field(default_factory=lambda: [45.0, 650.0])
+
+
+class CreatorBiometricProfile(BaseModel):
+    profile_id: str = "PGOD_CREATOR_SOVEREIGN_V1"
+    creator_email: str = "daophong1205@gmail.com"
+    vneid_hash: str
+    ed25519_public_key_hex: str
+    keystroke_baseline: KeystrokeDynamicsBaseline = Field(default_factory=KeystrokeDynamicsBaseline)
+    stylometric_markers: List[str] = Field(default_factory=list)
+    hardware_factors: List[str] = Field(default_factory=list)
+    geofence_corridor: Dict[str, Any] = Field(default_factory=dict)
+    is_locked: bool = True
